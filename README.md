@@ -4,20 +4,17 @@ Infraestrutura Kubernetes da Mecânica do Braia, provisionada com Terraform na A
 (EKS). Este é o repositório **#2** do Tech Challenge — Fase 3 (FIAP SOAT):
 
 1. Lambda — função serverless de autenticação por CPF
-2. **Infraestrutura Kubernetes (Terraform)** ← este repositório
+2. **Infraestrutura Kubernetes (Terraform)**
 3. Infraestrutura do banco de dados gerenciado (Terraform)
 4. Aplicação principal executando em Kubernetes
    ([fiap-soat-mecanica-api](https://github.com/gabriel-sartoretto/fiap-soat-mecanica-api))
 
-## Propósito
+## Objetivo
 
 Criar e manter o cluster EKS onde a API da oficina roda, com escalabilidade
 (managed node group + metrics-server para HPA), e expor os dados que os demais
 repositórios precisam para se conectar a ele (VPC, security group, nome do
 cluster, comando de kubeconfig).
-
-Este repositório **não** faz deploy da aplicação nem cria o banco. Isso é
-responsabilidade dos repositórios #4 e #3.
 
 ## Tecnologias
 
@@ -26,7 +23,7 @@ responsabilidade dos repositórios #4 e #3.
 - AWS EKS Managed Node Group (EC2 `t3.medium`)
 - EKS Addon `metrics-server`
 - EKS Access Entries (autenticação `API_AND_CONFIG_MAP`, admin automático para quem cria o cluster)
-- GitHub Actions (pipeline nos próximos PRs)
+- GitHub Actions
 
 ## Arquitetura
 
@@ -70,19 +67,19 @@ local ignorado pelo Git.
 ```text
 .
 ├── bootstrap/
-│   └── create-state-bucket.sh   # cria o bucket S3 de state (1x por conta)
+│   └── create-state-bucket.sh  
 └── terraform/
-    ├── versions.tf              # versão do Terraform e provider aws
-    ├── backend.tf               # backend "s3" {} — config vem de backend.hcl
-    ├── backend.hcl.example      # modelo do backend.hcl local
-    ├── providers.tf             # provider aws + tags padrão
-    ├── variables.tf             # nomes, roles, tamanho dos nodes
-    ├── locals.tf                # ARNs montados a partir da conta ativa, subnets filtradas
-    ├── data.tf                  # conta ativa, VPC default e suas subnets
-    ├── eks-cluster.tf           # cluster EKS (admin automático para a role voclabs)
-    ├── eks-node.tf              # managed node group
-    ├── eks-addons.tf            # addon metrics-server
-    └── outputs.tf               # dados consumidos pelos repositórios #3 e #4
+    ├── versions.tf              
+    ├── backend.tf               
+    ├── backend.hcl.example      
+    ├── providers.tf             
+    ├── variables.tf             
+    ├── locals.tf                
+    ├── data.tf                  
+    ├── eks-cluster.tf           
+    ├── eks-node.tf              
+    ├── eks-addons.tf            
+    └── outputs.tf            
 ```
 
 ## Pré-requisitos
@@ -139,7 +136,7 @@ O `apply` leva cerca de 15 minutos (control plane ~10 min, node group ~5 min).
 ```bash
 $(terraform output -raw kubeconfig_command)
 kubectl get nodes
-kubectl top nodes            # prova que o metrics-server está ativo
+kubectl top nodes            # garante que o metrics-server está ativo
 kubectl get addon -A 2>/dev/null || aws eks list-addons --cluster-name mecanica
 ```
 
@@ -171,25 +168,3 @@ data "terraform_remote_state" "k8s" {
   }
 }
 ```
-
-O que fica com o repositório da aplicação (#4): `Namespace`, `Deployment`,
-`Service` (tipo `LoadBalancer`, que cria um NLB público usado pelo API Gateway),
-`ConfigMap`, `Secret` e `HPA`.
-
-## Pipeline
-
-Será adicionada em PR próprio:
-
-- Pull request → `terraform fmt -check`, `validate`, `plan` comentado no PR
-- Push em `main` → `terraform apply`
-- `workflow_dispatch` → `terraform destroy` (controle de custo)
-
-Secrets necessários: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-`AWS_SESSION_TOKEN`. Um `plan` que falha com `ExpiredToken` significa sessão do
-Learner Lab vencida — renove os três secrets.
-
-## Referências
-
-- [terraform-academy](https://github.com/dougls/terraform-academy) — exemplo de
-  EKS no Learner Lab fornecido pelo professor, base para as decisões de VPC
-  default, `LabRole` e exclusão da AZ `us-east-1e`

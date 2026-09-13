@@ -1,4 +1,3 @@
-# vpc-cni, coredns e kube-proxy sao instalados automaticamente pelo EKS.
 # metrics-server e necessario para o HPA da aplicacao e para kubectl top.
 resource "aws_eks_addon" "metrics_server" {
   cluster_name                = aws_eks_cluster.this.name
