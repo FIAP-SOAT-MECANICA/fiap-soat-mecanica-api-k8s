@@ -25,7 +25,7 @@ responsabilidade dos repositórios #4 e #3.
 - AWS EKS (control plane gerenciado)
 - AWS EKS Managed Node Group (EC2 `t3.medium`)
 - EKS Addon `metrics-server`
-- EKS Access Entries (autenticação `API_AND_CONFIG_MAP`)
+- EKS Access Entries (autenticação `API_AND_CONFIG_MAP`, admin automático para quem cria o cluster)
 - GitHub Actions (pipeline nos próximos PRs)
 
 ## Arquitetura
@@ -53,7 +53,7 @@ várias decisões do código:
 | Restrição | Consequência no projeto |
 | --- | --- |
 | Não é possível criar IAM Roles | Cluster e nodes usam a role pré-existente `LabRole` |
-| A sessão assume a role `voclabs` | Um *access entry* concede admin do cluster a `voclabs`; sem isso `kubectl` responde `Unauthorized` |
+| A sessão assume a role `voclabs` | O cluster é criado com `bootstrap_cluster_creator_admin_permissions = true`, então `voclabs` (quem roda o `apply`) recebe admin automaticamente e o `kubectl` funciona em qualquer sessão da conta |
 | Credenciais (access key, secret, session token) expiram a cada ~4h | Precisam ser renovadas no `~/.aws/credentials` local e nos GitHub Secrets antes de cada uso |
 | Recursos **não** são apagados quando a sessão termina | Rode `terraform destroy` ao encerrar o dia |
 | Crédito de ~US$ 50 por conta | EKS cobra ~US$ 0,10/h pelo control plane mesmo ocioso; mantenha o cluster ligado só quando necessário |
@@ -79,9 +79,8 @@ local ignorado pelo Git.
     ├── variables.tf             # nomes, roles, tamanho dos nodes
     ├── locals.tf                # ARNs montados a partir da conta ativa, subnets filtradas
     ├── data.tf                  # conta ativa, VPC default e suas subnets
-    ├── eks-cluster.tf           # cluster EKS
+    ├── eks-cluster.tf           # cluster EKS (admin automático para a role voclabs)
     ├── eks-node.tf              # managed node group
-    ├── eks-access.tf            # access entry admin para a role voclabs
     ├── eks-addons.tf            # addon metrics-server
     └── outputs.tf               # dados consumidos pelos repositórios #3 e #4
 ```
@@ -193,4 +192,4 @@ Learner Lab vencida — renove os três secrets.
 
 - [terraform-academy](https://github.com/dougls/terraform-academy) — exemplo de
   EKS no Learner Lab fornecido pelo professor, base para as decisões de VPC
-  default, `LabRole`, `voclabs` e exclusão da AZ `us-east-1e`
+  default, `LabRole` e exclusão da AZ `us-east-1e`

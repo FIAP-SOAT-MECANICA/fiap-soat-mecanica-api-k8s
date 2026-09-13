@@ -21,12 +21,6 @@ variable "lab_role_name" {
   default     = "LabRole"
 }
 
-variable "lab_session_role_name" {
-  type        = string
-  description = "IAM Role assumida pela sessao do Learner Lab (console, CLI e pipeline). Recebe acesso admin ao cluster."
-  default     = "voclabs"
-}
-
 variable "kubernetes_version" {
   type        = string
   description = "Versao do Kubernetes. null usa a versao padrao atual do EKS."

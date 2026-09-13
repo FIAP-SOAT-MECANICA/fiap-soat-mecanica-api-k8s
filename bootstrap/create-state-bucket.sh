@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Cria o bucket S3 de state do Terraform na conta AWS ativa.
-# Rode uma vez por conta (cada membro no seu Learner Lab; depois na conta final).
 set -euo pipefail
 
 PREFIX="${1:-mecanica}"
@@ -37,6 +36,7 @@ cat <<EOF
 Bucket pronto. Crie o arquivo terraform/backend.hcl com:
 
 bucket       = "${BUCKET}"
+key          = "k8s/terraform.tfstate"
 region       = "${REGION}"
 use_lockfile = true
 EOF

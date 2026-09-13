@@ -1,7 +1,6 @@
 locals {
-  account_id           = data.aws_caller_identity.current.account_id
-  lab_role_arn         = "arn:aws:iam::${local.account_id}:role/${var.lab_role_name}"
-  lab_session_role_arn = "arn:aws:iam::${local.account_id}:role/${var.lab_session_role_name}"
+  account_id   = data.aws_caller_identity.current.account_id
+  lab_role_arn = "arn:aws:iam::${local.account_id}:role/${var.lab_role_name}"
 
   subnet_ids = [
     for subnet in data.aws_subnet.default : subnet.id
