@@ -168,3 +168,43 @@ data "terraform_remote_state" "k8s" {
   }
 }
 ```
+
+## Pipeline (GitHub Actions)
+
+Três workflows em `.github/workflows/`:
+
+| Workflow | Gatilho | O que faz |
+| --- | --- | --- |
+| `terraform-pr.yml` | Pull request para `main` | Job `validate`: `fmt -check`, `init -backend=false`, `validate` (não precisa de AWS). Job `plan`: `init` no bucket da conta + `plan`, com a saída comentada no PR. Só roda se os secrets existirem |
+| `terraform-apply.yml` | Push em `main` que altere `terraform/**` (ou manual) | `init`, `validate`, `plan`, `apply` e imprime os outputs |
+| `terraform-destroy.yml` | Manual (`workflow_dispatch`) | Pede a confirmação `destroy` e executa `terraform destroy` — controle de custo no Learner Lab |
+
+Os três compartilham o grupo de concorrência `terraform-state`, então nunca há
+dois `plan`/`apply`/`destroy` rodando ao mesmo tempo sobre o mesmo state.
+
+### Como o backend é resolvido na pipeline
+
+Não existe secret com nome de bucket nem account ID. O workflow descobre a
+conta ativa com `aws sts get-caller-identity` e monta
+`mecanica-tfstate-<account-id>` na hora. O mesmo workflow funciona na conta de
+qualquer integrante e na conta final — basta trocar os secrets.
+
+### Secrets necessários (Settings → Secrets and variables → Actions)
+
+| Secret | Origem |
+| --- | --- |
+| `AWS_ACCESS_KEY_ID` | Learner Lab → AWS Details → AWS CLI → Show |
+| `AWS_SECRET_ACCESS_KEY` | idem |
+| `AWS_SESSION_TOKEN` | idem |
+
+Os três **expiram a cada ~4h** junto com a sessão do lab. Se um workflow
+falhar com `ExpiredToken` ou `InvalidClientTokenId`, não é bug: renove os três
+secrets e execute de novo (`Re-run jobs`).
+
+### Fluxo típico de um dia de trabalho
+
+1. Start Lab → copiar credenciais → atualizar os 3 secrets.
+2. Abrir PR → conferir o comentário do `plan`.
+3. Merge → `terraform-apply.yml` sobe o cluster.
+4. Fim do dia → Actions → `Terraform Destroy` → `Run workflow` → digitar `destroy`.
+5. End Lab.
