@@ -1,0 +1,122 @@
+name: Terraform PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: "1.15.8"
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  validate:
+    name: Formatacao e validacao
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform init (sem backend)
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform validate -no-color
+
+  check-credentials:
+    name: Credenciais AWS disponiveis?
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - id: check
+        working-directory: .
+        run: echo "available=${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SESSION_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
+  plan:
+    name: Plan
+    needs: [validate, check-credentials]
+    if: needs.check-credentials.outputs.available == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-state
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Resolver bucket de state da conta ativa
+        id: backend
+        run: |
+          account_id=$(aws sts get-caller-identity --query Account --output text)
+          echo "bucket=mecanica-tfstate-${account_id}" >> "$GITHUB_OUTPUT"
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ steps.backend.outputs.bucket }}" \
+            -backend-config="key=k8s/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="use_lockfile=true"
+
+      - name: terraform plan
+        id: plan
+        run: |
+          set -o pipefail
+          terraform plan -input=false -no-color -out=tfplan | tee plan.txt
+
+      - name: Comentar plan no PR
+        if: always() && steps.plan.outcome != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'terraform/plan.txt';
+            const outcome = '${{ steps.plan.outcome }}';
+            let plan = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : '(sem saida)';
+            const limit = 60000;
+            if (plan.length > limit) {
+              plan = plan.slice(0, limit) + '\n... (truncado)';
+            }
+            const status = outcome === 'success' ? 'sucesso' : 'falhou';
+            const body = [
+              `### Terraform plan (${status})`,
+              '',
+              '<details><summary>Saida completa</summary>',
+              '',
+              '```',
+              plan,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
