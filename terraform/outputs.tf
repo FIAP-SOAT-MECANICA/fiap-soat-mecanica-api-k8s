@@ -48,3 +48,8 @@ output "kubeconfig_command" {
   value       = "aws eks update-kubeconfig --name ${aws_eks_cluster.this.name} --region ${var.aws_region}"
   description = "Comando para configurar o kubectl local ou na pipeline da aplicacao."
 }
+
+output "traefik_namespace" {
+  value       = helm_release.traefik.namespace
+  description = "Namespace do gateway Traefik. O repo #4 (API) aplica um Ingress apontando para o Service 'traefik' nesse namespace."
+}

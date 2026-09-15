@@ -57,6 +57,17 @@ variable "node_min_size" {
   description = "Minimo de nodes."
 }
 
+variable "traefik_node_port" {
+  type        = number
+  description = "NodePort do entrypoint web (HTTP) do gateway Traefik."
+  default     = 30090
+
+  validation {
+    condition     = var.traefik_node_port >= 30000 && var.traefik_node_port <= 32767
+    error_message = "traefik_node_port deve estar entre 30000 e 32767."
+  }
+}
+
 variable "node_max_size" {
   type        = number
   default     = 3

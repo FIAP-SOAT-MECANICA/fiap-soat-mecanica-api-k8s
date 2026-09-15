@@ -22,6 +22,7 @@ cluster, comando de kubeconfig).
 - AWS EKS (control plane gerenciado)
 - AWS EKS Managed Node Group (EC2 `t3.medium`)
 - EKS Addon `metrics-server`
+- Traefik (Helm release) como API Gateway do cluster — controla e roteia as requisições até os services das aplicações
 - EKS Access Entries (autenticação `API_AND_CONFIG_MAP`, admin automático para quem cria o cluster)
 - GitHub Actions
 
@@ -35,11 +36,14 @@ flowchart LR
   EKS --> NG[Managed node group\n2x t3.medium, min 1 / max 3]
   EKS --> MS[Addon metrics-server]
   MS --> HPA[HPA da API\nrepo #4]
+  EKS --> TR[Helm release Traefik\nAPI Gateway do cluster]
   subgraph VPC default da conta
     NG
   end
   RDS[(RDS - repo #3)] -. 5432 liberado para o SG do cluster .-> NG
   API[Deployment da API - repo #4] -. kubectl apply .-> NG
+  API -. Ingress .-> TR
+  TR -. roteia e controla as requisicoes .-> API
 ```
 
 ## Restrições do AWS Academy Learner Lab
@@ -155,6 +159,7 @@ terraform destroy
 | `subnet_ids` | #3 (RDS) | Subnet group do RDS |
 | `cluster_name`, `region`, `kubeconfig_command` | #4 (API) | Configurar o kubectl na pipeline de deploy |
 | `cluster_endpoint`, `cluster_certificate_authority` | #4 (API) | Alternativa ao `update-kubeconfig` |
+| `traefik_namespace` | #4 (API) | Namespace do gateway; a API aplica um `Ingress` apontando pro Service `traefik` nesse namespace |
 
 Leitura via remote state:
 
