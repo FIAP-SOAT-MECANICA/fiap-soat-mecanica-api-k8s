@@ -53,3 +53,8 @@ output "traefik_namespace" {
   value       = helm_release.traefik.namespace
   description = "Namespace do gateway Traefik. O repo #4 (API) aplica um Ingress apontando para o Service 'traefik' nesse namespace."
 }
+
+output "opentelemetry_operator_namespace" {
+  value       = helm_release.opentelemetry_operator.namespace
+  description = "Namespace do OpenTelemetry Operator. O repo #4 (API) aplica o OpenTelemetryCollector e a Instrumentation no namespace da propria aplicacao; o Operator so precisa estar Available antes disso."
+}
