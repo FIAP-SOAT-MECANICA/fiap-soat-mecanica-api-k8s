@@ -19,4 +19,6 @@ resource "aws_eks_node_group" "this" {
   lifecycle {
     ignore_changes = [scaling_config[0].desired_size]
   }
+
+  depends_on = [aws_vpc_security_group_egress_rule.cluster_all_egress]
 }

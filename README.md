@@ -7,7 +7,7 @@ Infraestrutura Kubernetes da Mecânica do Braia, provisionada com Terraform na A
 2. **Infraestrutura Kubernetes (Terraform)**
 3. Infraestrutura do banco de dados gerenciado (Terraform)
 4. Aplicação principal executando em Kubernetes
-   ([fiap-soat-mecanica-api](https://github.com/gabriel-sartoretto/fiap-soat-mecanica-api))
+   ([fiap-soat-mecanica-api](https://github.com/FIAP-SOAT-MECANICA/fiap-soat-mecanica-api))
 
 ## Objetivo
 
@@ -23,6 +23,7 @@ cluster, comando de kubeconfig).
 - AWS EKS Managed Node Group (EC2 `t3.medium`)
 - EKS Addon `metrics-server`
 - Traefik (Helm release) como API Gateway do cluster — controla e roteia as requisições até os services das aplicações
+- OpenTelemetry Operator (Helm release) — CRDs `OpenTelemetryCollector`/`Instrumentation` e o admission webhook que injeta o agente Java nos pods das aplicações
 - EKS Access Entries (autenticação `API_AND_CONFIG_MAP`, admin automático para quem cria o cluster)
 - GitHub Actions
 
@@ -37,6 +38,7 @@ flowchart LR
   EKS --> MS[Addon metrics-server]
   MS --> HPA[HPA da API\nrepo #4]
   EKS --> TR[Helm release Traefik\nAPI Gateway do cluster]
+  EKS --> OTEL[Helm release OpenTelemetry Operator\nCRDs + admission webhook]
   subgraph VPC default da conta
     NG
   end
@@ -44,6 +46,8 @@ flowchart LR
   API[Deployment da API - repo #4] -. kubectl apply .-> NG
   API -. Ingress .-> TR
   TR -. roteia e controla as requisicoes .-> API
+  API -. Collector + Instrumentation .-> OTEL
+  OTEL -. injeta agente Java .-> API
 ```
 
 ## Restrições do AWS Academy Learner Lab
@@ -160,6 +164,7 @@ terraform destroy
 | `cluster_name`, `region`, `kubeconfig_command` | #4 (API) | Configurar o kubectl na pipeline de deploy |
 | `cluster_endpoint`, `cluster_certificate_authority` | #4 (API) | Alternativa ao `update-kubeconfig` |
 | `traefik_namespace` | #4 (API) | Namespace do gateway; a API aplica um `Ingress` apontando pro Service `traefik` nesse namespace |
+| `opentelemetry_operator_namespace` | #4 (API) | Namespace do OpenTelemetry Operator; a API aplica o `OpenTelemetryCollector`/`Instrumentation` no proprio namespace, so precisa que o Operator esteja `Available` aqui antes |
 
 Leitura via remote state:
 
