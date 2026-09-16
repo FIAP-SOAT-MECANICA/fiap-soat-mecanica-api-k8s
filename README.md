@@ -218,3 +218,13 @@ secrets e execute de novo (`Re-run jobs`).
 3. Merge → `terraform-apply.yml` sobe o cluster.
 4. Fim do dia → Actions → `Terraform Destroy` → `Run workflow` → digitar `destroy`.
 5. End Lab.
+
+## Documentação
+
+As decisões deste repositório estão em [`docs/`](docs/README.md):
+
+- [RFC-001](docs/rfc/RFC-001-eks-learner-lab.md) — EKS no AWS Academy Learner Lab: restrições, alternativas, custo e validação
+- [ADR-001](docs/adr/ADR-001-escalabilidade.md) — escalabilidade (HPA + managed node group)
+- [ADR-002](docs/adr/ADR-002-ambiente-unico.md) — ambiente único de produção
+- [ADR-003](docs/adr/ADR-003-traefik-api-gateway.md) — Traefik como API Gateway
+- [ADR-004](docs/adr/ADR-004-opentelemetry-operator.md) — OpenTelemetry Operator
