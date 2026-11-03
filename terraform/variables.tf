@@ -47,7 +47,7 @@ variable "node_disk_size" {
 
 variable "node_desired_size" {
   type        = number
-  default     = 2
+  default     = 3
   description = "Quantidade inicial de nodes."
 }
 
@@ -68,9 +68,26 @@ variable "traefik_node_port" {
   }
 }
 
+variable "enable_public_nlb" {
+  type        = bool
+  description = "Habilita NLB publico e publicacao do DNS no SSM. Ative apos os servicos validarem JWT diretamente."
+  default     = false
+}
+
+variable "nlb_dns_ssm_parameter_name" {
+  type        = string
+  description = "Nome do parametro SSM compartilhado com -auth; null usa /<project>/k8s/nlb-dns."
+  default     = null
+
+  validation {
+    condition     = var.nlb_dns_ssm_parameter_name == null || can(regex("^/[A-Za-z0-9_./-]+$", var.nlb_dns_ssm_parameter_name))
+    error_message = "nlb_dns_ssm_parameter_name deve ser um caminho SSM absoluto valido."
+  }
+}
+
 variable "node_max_size" {
   type        = number
-  default     = 3
+  default     = 4
   description = "Maximo de nodes."
 
   validation {
