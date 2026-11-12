@@ -54,7 +54,22 @@ output "traefik_namespace" {
   description = "Namespace do gateway Traefik. O repo #4 (API) aplica um Ingress apontando para o Service 'traefik' nesse namespace."
 }
 
+output "application_namespace" {
+  value       = "mecanica"
+  description = "Namespace compartilhado dos quatro microsservicos e do collector."
+}
+
+output "traefik_nlb_dns" {
+  value       = try(aws_lb.traefik[0].dns_name, null)
+  description = "DNS do NLB publico, quando enable_public_nlb=true."
+}
+
+output "traefik_nlb_ssm_parameter" {
+  value       = try(aws_ssm_parameter.traefik_nlb_dns[0].name, null)
+  description = "Nome do parametro SSM consumido pelo repositorio -auth."
+}
+
 output "opentelemetry_operator_namespace" {
   value       = helm_release.opentelemetry_operator.namespace
-  description = "Namespace do OpenTelemetry Operator. O repo #4 (API) aplica o OpenTelemetryCollector e a Instrumentation no namespace da propria aplicacao; o Operator so precisa estar Available antes disso."
+  description = "Namespace do OpenTelemetry Operator. Os recursos compartilhados de Collector e Instrumentation sao aplicados no namespace mecanica apos o Operator estar Available."
 }

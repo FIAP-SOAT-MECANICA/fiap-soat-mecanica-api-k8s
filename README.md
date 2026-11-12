@@ -27,6 +27,32 @@ cluster, comando de kubeconfig).
 - EKS Access Entries (autenticação `API_AND_CONFIG_MAP`, admin automático para quem cria o cluster)
 - GitHub Actions
 
+## Preparação da Fase 4 (proposta local)
+
+O cluster passa a iniciar com 3 nodes (máximo 4) e o chart do Traefik fica
+fixado na versão `37.4.0`. A borda pública está preparada em `terraform/nlb.tf`,
+mas `enable_public_nlb` começa em `false`. Após validar JWT em todos os quatro
+serviços e revisar as rotas, ative com `-var='enable_public_nlb=true'` no plan
+e apply. Isso cria um NLB TCP/80 para o NodePort configurado e grava seu DNS
+no SSM em `/${project}/k8s/nlb-dns` (por padrão `/mecanica/k8s/nlb-dns`).
+Confira os outputs `traefik_nlb_dns` e `traefik_nlb_ssm_parameter` antes de
+configurar o repositório `-auth`. A URL pública também atende chamadas diretas;
+cada serviço precisa validar o JWT.
+
+Depois de provisionar o cluster e confirmar que o OpenTelemetry Operator está
+disponível, configure o `kubectl`, exporte `DD_API_KEY` no ambiente e execute
+`bash k8s/apply-observability.sh`. O script cria o namespace `mecanica`, RBAC,
+Secret, Collector DaemonSet e Instrumentation compartilhados. A chave não é
+gravada no repositório. Os quatro serviços podem anotar seus pods com
+`instrumentation.opentelemetry.io/inject-java: "mecanica/java-instrumentation"`.
+O endpoint OTLP é `otel-daemonset-collector.mecanica.svc.cluster.local:4318`.
+Esses manifests foram trazidos do repositório da aplicação da Fase 3 e devem
+ser validados no cluster após a migração; o script não faz parte do `apply` do
+Terraform.
+
+Veja [ADR-F4-06](docs/adr/ADR-F4-06-public-edge.md) para a ordem segura de
+ativação da borda e verificações de integração.
+
 ## Arquitetura
 
 ```mermaid
@@ -34,7 +60,7 @@ flowchart LR
   GH[GitHub Actions] -->|terraform apply| TF[Terraform]
   TF --> S3[(S3: state)]
   TF --> EKS[EKS control plane]
-  EKS --> NG[Managed node group\n2x t3.medium, min 1 / max 3]
+  EKS --> NG[Managed node group\n3x t3.medium, min 1 / max 4]
   EKS --> MS[Addon metrics-server]
   MS --> HPA[HPA da API\nrepo #4]
   EKS --> TR[Helm release Traefik\nAPI Gateway do cluster]
